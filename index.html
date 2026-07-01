@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant POS Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f4f6f8;
+            --sidebar-bg: #ffffff;
+            --primary: #ff6b6b;
+            --primary-dark: #ee5253;
+            --text-main: #2d3436;
+            --text-light: #636e72;
+            --card-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .header { margin-bottom: 2rem; }
+        .header h1 { margin: 0; font-size: 2rem; font-weight: 800; color: var(--text-main); }
+        .header p { margin: 5px 0 0 0; color: var(--text-light); }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .menu-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: var(--card-shadow);
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+            user-select: none;
+        }
+
+        .menu-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
+        .menu-card:active { transform: translateY(0); border-color: var(--primary); }
+        
+        .food-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .menu-card h3 { margin: 0 0 0.5rem 0; font-size: 1.1rem; }
+        .menu-card .price { color: var(--primary); font-weight: 600; font-size: 1.2rem; }
+
+        .receipt-panel {
+            width: 400px;
+            background: var(--sidebar-bg);
+            box-shadow: -5px 0 15px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 1.5rem;
+            z-index: 10;
+        }
+
+        .receipt-header { border-bottom: 2px dashed #dfe6e9; padding-bottom: 1rem; margin-bottom: 1rem; }
+        .receipt-header h2 { margin: 0; font-size: 1.5rem; }
+
+        .current-order {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+        }
+
+        .order-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            background: var(--bg-color);
+            padding: 0.8rem;
+            border-radius: 8px;
+        }
+        
+        .order-info h4 { margin: 0; font-size: 1rem; }
+        .order-info span { font-size: 0.85rem; color: var(--text-light); }
+        
+        .qty-controls { display: flex; align-items: center; gap: 10px; }
+        .qty-btn { background: white; border: 1px solid #dfe6e9; border-radius: 4px; width: 28px; height: 28px; cursor: pointer; font-weight: bold; }
+        .qty-btn:hover { background: #f1f2f6; }
+
+        .checkout-area {
+            background: var(--bg-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+        }
+
+        .summary-line { display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: var(--text-light); }
+        .total-line { display: flex; justify-content: space-between; font-size: 1.5rem; font-weight: 800; color: var(--text-main); margin-top: 1rem; padding-top: 1rem; border-top: 2px dashed #dfe6e9; }
+
+        .checkout-btn {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 1.2rem;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .checkout-btn:hover { background: var(--primary-dark); }
+        
+        #receipt-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 100;
+        }
+        .modal-content {
+            background: white; padding: 2rem; border-radius: 12px; width: 400px; max-height: 80vh; overflow-y: auto; text-align: center;
+        }
+        .close-btn { background: #2d3436; margin-top: 1rem; }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Java POS Terminal</h1>
+            <p>Select items to add them to the current order.</p>
+        </div>
+        <div class="menu-grid" id="menu-grid">
+            </div>
+    </div>
+
+    <div class="receipt-panel">
+        <div class="receipt-header">
+            <h2>Current Order</h2>
+        </div>
+        
+        <div class="current-order" id="current-order">
+            <p style="text-align:center; color:#636e72; margin-top: 2rem;">No items added yet.</p>
+        </div>
+
+        <div class="checkout-area">
+            <div class="summary-line">
+                <span>Subtotal</span>
+                <span>₹<span id="ui-subtotal">0.00</span></span>
+            </div>
+            <div class="summary-line">
+                <span>GST (5%)</span>
+                <span>₹<span id="ui-gst">0.00</span></span>
+            </div>
+            <div class="total-line">
+                <span>Total</span>
+                <span>₹<span id="ui-total">0.00</span></span>
+            </div>
+            <button class="checkout-btn" onclick="submitOrder()">Print Bill to Kitchen</button>
+        </div>
+    </div>
+
+    <div id="receipt-modal">
+        <div class="modal-content">
+            <h2 style="border-bottom: 2px dashed #000; padding-bottom: 10px;">Official Receipt</h2>
+            <ul id="final-receipt-items" style="list-style: none; padding: 0; text-align: left;"></ul>
+            <h3 style="border-top: 2px dashed #000; padding-top: 10px;">Total Paid: ₹<span id="final-total"></span></h3>
+            <button class="checkout-btn close-btn" onclick="closeModal()">Start New Order</button>
+        </div>
+    </div>
+
+    <script>
+        let menuItems = [];
+        let orderState = {}; 
+
+        function getIcon(name) {
+            const n = name.toLowerCase();
+            if (n.includes('pizza')) return '🍕';
+            if (n.includes('pasta')) return '🍝';
+            if (n.includes('bread')) return '🥖';
+            if (n.includes('coffee')) return '☕';
+            if (n.includes('brownie')) return '🧁';
+            return '🍽️';
+        }
+
+        window.onload = function() {
+            fetch('/api/menu')
+                .then(res => res.json())
+                .then(data => {
+                    menuItems = data;
+                    renderMenu();
+                });
+        }
+
+        function renderMenu() {
+            const grid = document.getElementById('menu-grid');
+            grid.innerHTML = '';
+            menuItems.forEach(item => {
+                grid.innerHTML += `
+                    <div class="menu-card" onclick="addToOrder(${item.id})">
+                        <div class="food-icon">${getIcon(item.name)}</div>
+                        <h3>${item.name}</h3>
+                        <div class="price">₹${item.price.toFixed(2)}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function addToOrder(id) {
+            orderState[id] = (orderState[id] || 0) + 1;
+            renderOrder();
+        }
+
+        function updateQty(id, delta) {
+            if (orderState[id]) {
+                orderState[id] += delta;
+                if (orderState[id] <= 0) delete orderState[id];
+                renderOrder();
+            }
+        }
+
+        function renderOrder() {
+            const container = document.getElementById('current-order');
+            if (Object.keys(orderState).length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#636e72; margin-top: 2rem;">No items added yet.</p>';
+                document.getElementById('ui-subtotal').innerText = '0.00';
+                document.getElementById('ui-gst').innerText = '0.00';
+                document.getElementById('ui-total').innerText = '0.00';
+                return;
+            }
+
+            container.innerHTML = '';
+            let tempSubtotal = 0;
+
+            for (const [id, qty] of Object.entries(orderState)) {
+                const item = menuItems.find(i => i.id == id);
+                const itemTotal = item.price * qty;
+                tempSubtotal += itemTotal;
+
+                container.innerHTML += `
+                    <div class="order-row">
+                        <div class="order-info">
+                            <h4>${item.name}</h4>
+                            <span>₹${item.price}</span>
+                        </div>
+                        <div class="qty-controls">
+                            <button class="qty-btn" onclick="updateQty(${id}, -1)">-</button>
+                            <span>${qty}</span>
+                            <button class="qty-btn" onclick="updateQty(${id}, 1)">+</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const tempGst = tempSubtotal * 0.05;
+            document.getElementById('ui-subtotal').innerText = tempSubtotal.toFixed(2);
+            document.getElementById('ui-gst').innerText = tempGst.toFixed(2);
+            document.getElementById('ui-total').innerText = (tempSubtotal + tempGst).toFixed(2);
+        }
+
+        function submitOrder() {
+            if (Object.keys(orderState).length === 0) {
+                alert("Please add items to the order first!");
+                return;
+            }
+
+            fetch('/api/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: orderState })
+            })
+            .then(res => res.json())
+            .then(data => {
+                const list = document.getElementById('final-receipt-items');
+                list.innerHTML = '';
+                data.details.forEach(d => { list.innerHTML += `<li style="margin-bottom:8px;">${d}</li>`; });
+                document.getElementById('final-total').innerText = data.total.toFixed(2);
+                
+                document.getElementById('receipt-modal').style.display = 'flex';
+            });
+        }
+
+        function closeModal() {
+            document.getElementById('receipt-modal').style.display = 'none';
+            orderState = {}; 
+            renderOrder();
+        }
+    </script>
+</body>
+</html>
